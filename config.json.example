@@ -1,0 +1,20 @@
+{
+    "user": "you@example.com",
+    "client_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "tenant_id": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+    "allowed_domains": [
+        "example.com"
+    ],
+    "mailboxes": [
+        {
+            "username": "send_as@example.com",
+            "password": "hashed-secret"
+        }
+    ],
+    "bind": "127.0.0.1",
+    "smtp_port": 10025,
+    "pop3_port": 10110,
+    "logging": {
+        "level": "INFO"
+    }
+}
