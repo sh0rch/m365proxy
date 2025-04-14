@@ -27,6 +27,7 @@ from m365proxy.utils import (
     detect_prog,
     is_valid_email,
     get_app_data_dir,
+    sanitize_url,
     is_port_available
 )
 
@@ -319,20 +320,12 @@ def load_config(args, path=None) -> dict:
             
             os.environ["HTTPS_PROXY"] = https_proxy
             os.environ["https_proxy"] = https_proxy
-            sanitized_https_proxy = sanitize_proxy_url(https_proxy)
+            sanitized_https_proxy = sanitize_url(https_proxy)
             logging.info("HTTPS proxy set to: %s", sanitized_https_proxy)
                 
         except Exception as e:
             logging.error(f"Failed to encode proxy URL: {e}")
             return {}
-
-def sanitize_proxy_url(proxy_url: str) -> str:
-    parsed_url = urlparse(proxy_url)
-    sanitized_netloc = parsed_url.hostname
-    if parsed_url.port:
-        sanitized_netloc += f":{parsed_url.port}"
-    sanitized_url = parsed_url._replace(netloc=sanitized_netloc).geturl()
-    return sanitized_url
 
     if not bind_address or not isinstance(bind_address, str):
         logging.error("Bind address must be a string.")

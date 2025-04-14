@@ -12,7 +12,11 @@ import signal
 import json
 from aiosmtpd.controller import Controller
 import logging
-from m365proxy.config import IS_WINDOWS, get_app_data_dir, get_cmd_parser, load_config, setup_logging
+from m365proxy.config import (
+    IS_WINDOWS,
+    get_app_data_dir,
+    get_cmd_parser, load_config, setup_logging,
+sanitize_url)
 from m365proxy.proxies import SMTPHandler
 
 def trigger_shutdown(shutdown_event: asyncio.Event) -> None:
@@ -80,7 +84,6 @@ async def background_token_refresh(shutdown_event: asyncio.Event) -> None:
         raise
 
 async def main() -> int:
-
     args = get_cmd_parser().parse_args()
     app_data_dir = get_app_data_dir(args.config)
 
@@ -126,8 +129,11 @@ async def main() -> int:
             return obj
         def sanitize_config(config):
             sanitized_config = config.copy()
-            if "https_proxy" in sanitized_config:
-                sanitized_config["https_proxy"] = "****"
+            https_proxy = sanitized_config.get("https_proxy", {})
+            if https_proxy:
+                if "password" in https_proxy:
+                    https_proxy["password"] = "****"
+                sanitized_config["https_proxy"] = https_proxy
             return sanitized_config
         try:
             sanitized_config = sanitize_config(config)

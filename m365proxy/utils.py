@@ -129,3 +129,10 @@ def validated_input(prompt: str, validation_func: any, default = None) -> str:
             continue
         
         return user_input
+    
+def sanitize_url(url: str) -> str:
+    return re.sub(
+        r'(?P<scheme>\w+://)(?P<user>[^:@/\s]+):(?P<password>[^@/\s]+)@',
+        r'\g<scheme>\g<user>:****@',
+        url
+    )

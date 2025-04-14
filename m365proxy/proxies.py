@@ -55,7 +55,7 @@ class SMTPHandler:
         logging.debug("Username received: %s", username)
         password_bytes = await server.challenge_auth('UGFzc3dvcmQ6', encode_to_b64=False, log_client_response=False)
         password = password_bytes.decode('utf-8', errors='replace')
-        # logging.debug("Password received: %s", password)
+        logging.debug("Password received: ******")
         if check_credentials(username, password):
             logging.info(f"Auth success: {username} from server")
             return AuthResult(success=True, handled=True)
@@ -76,7 +76,7 @@ class SMTPHandler:
         
         [auth_id, username, password] = parts
 
-        logging.debug(f"AUTH PLAIN: authzid=\"{auth_id}\", user={username}")
+        logging.debug(f"AUTH PLAIN: authzid=\"{auth_id}\", user={username}, password=******")
 
         if check_credentials(username, password):
                 logging.info(f"Auth success: {username} from server")
