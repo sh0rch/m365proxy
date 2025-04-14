@@ -124,8 +124,14 @@ async def main() -> int:
             elif isinstance(obj, Path):
                 return str(obj)
             return obj
+        def sanitize_config(config):
+            sanitized_config = config.copy()
+            if "https_proxy" in sanitized_config:
+                sanitized_config["https_proxy"] = "****"
+            return sanitized_config
         try:
-            print(json.dumps(convert_paths(config), indent=4))
+            sanitized_config = sanitize_config(config)
+            print(json.dumps(convert_paths(sanitized_config), indent=4))
         except Exception as e:
             print(f"Error converting config to JSON: {e}")
             return 1
