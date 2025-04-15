@@ -29,8 +29,13 @@ async def wait_for_shutdown_signal(shutdown_event: asyncio.Event) -> None:
 
     def keyboard_interrupt():
         try:
+            if sys.stdin is None or not sys.stdin.isatty():
+                logging.warning("stdin not available, skipping input() wait.")
+                return
             input()
         except EOFError:
+            pass
+        except RuntimeError as e:
             pass
         trigger_shutdown(shutdown_event)
 
