@@ -1,3 +1,4 @@
+"""Authentication and token management for Microsoft 365 and m365proxy."""
 # -----------------------------------------------------------------------------
 # m365proxy - Lightweight Microsoft 365 SMTP/POP3 proxy over Graph API
 # https://pypi.org/project/m365proxy
@@ -6,45 +7,56 @@
 # Licensed under the MIT License: https://opensource.org/licenses/MIT
 # -----------------------------------------------------------------------------
 
-import sys
 import json
 import logging
-import bcrypt
-from pathlib import Path
+import sys
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 from datetime import datetime, timedelta, timezone
-from base64 import urlsafe_b64encode, urlsafe_b64decode
 from hashlib import sha256
+from pathlib import Path
+from typing import Optional
+
+import bcrypt
 from cryptography.fernet import Fernet
 from msal import PublicClientApplication
+
 from m365proxy.config import get_config_value
-from typing import Optional
 
 BASE_DIR = Path(__file__).resolve().parent
 AUTHORITY = "https://login.microsoftonline.com"
-SCOPES=[
-        "https://graph.microsoft.com/Mail.Send",
-        "https://graph.microsoft.com/Mail.Send.Shared",
-        "https://graph.microsoft.com/Mail.ReadWrite",
-        "https://graph.microsoft.com/Mail.ReadWrite.Shared",
-        "https://graph.microsoft.com/User.Read"
-    ]
+SCOPES = [
+    "https://graph.microsoft.com/Mail.Send",
+    "https://graph.microsoft.com/Mail.Send.Shared",
+    "https://graph.microsoft.com/Mail.ReadWrite",
+    "https://graph.microsoft.com/Mail.ReadWrite.Shared",
+    "https://graph.microsoft.com/User.Read"
+]
+
 
 def format_duration(seconds: int) -> str:
+    """Format seconds into a human-readable string."""
     seconds = int(seconds)
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
-    return f"{hours}h {minutes}m {secs}s" if hours > 0 else f"{minutes}m {secs}s" if minutes > 0 else f"{secs}s"
+    return f"{hours}h {minutes}m {secs}s" if hours > 0 else \
+        f"{minutes}m {secs}s" if minutes > 0 else f"{secs}s"
+
 
 def hash_password(plain_password: str) -> str:
+    """Hash a plain password using bcrypt."""
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(plain_password.encode(), salt)
     return hashed.decode()
 
+
 def check_password(plain_password: str, hashed_password: str) -> bool:
+    """Check if a plain password matches a hashed password."""
     return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
+
 def load_tokens() -> Optional[dict]:
+    """Load tokens from the specified token path."""
     token_path = Path(get_config_value("token_path"))
     if not token_path.exists():
         return None
@@ -55,7 +67,9 @@ def load_tokens() -> Optional[dict]:
     except Exception:
         return None
 
+
 def save_tokens(data: dict) -> bool:
+    """Save tokens to the specified token path."""
     token_path = Path(get_config_value("token_path"))
     try:
         part = get_key_part()
@@ -66,59 +80,78 @@ def save_tokens(data: dict) -> bool:
         return False
     return True
 
+
 def get_key_part() -> bytes:
+    """Generate a key part for encryption/decryption."""
     part = get_config_value("client_id").split("-")[-1]
     return urlsafe_b64encode(sha256(part.encode()).digest())
 
+
 def now_utc_iso() -> str:
+    """Get the current UTC time in ISO 8601 format."""
     return datetime.now(timezone.utc).isoformat()
 
+
 async def refresh_token_if_needed(force=False) -> bool:
+    """Refresh the access token if needed."""
     tokens = load_tokens()
     if not tokens:
         logging.error("No token found or unable to decrypt.")
         return False
-    
+
     last = tokens.get("last_refresh")
     if last:
         try:
             last = datetime.fromisoformat(last)
         except Exception:
-            last = datetime(1970, 1, 1).replace(tzinfo=timezone.utc) 
+            last = datetime(1970, 1, 1).replace(tzinfo=timezone.utc)
     else:
         last = datetime(1970, 1, 1).replace(tzinfo=timezone.utc)
 
-    if "refresh_token" in tokens and not force and datetime.now(timezone.utc) - last < timedelta(hours=1):
+    if "refresh_token" in tokens and not force and \
+            datetime.now(timezone.utc) - last < timedelta(hours=1):
         return True
 
     if "refresh_token" not in tokens:
-        logging.error("Refresh token not found. Please login using device_code flow.")
+        logging.error(
+            "Refresh token not found. Please login using device_code flow.")
         return False
 
-    app = PublicClientApplication(get_config_value("client_id"), authority=f"{AUTHORITY}/{get_config_value('tenant_id')}")
-    result = app.acquire_token_by_refresh_token(tokens["refresh_token"], scopes=SCOPES)
+    app = PublicClientApplication(
+        get_config_value("client_id"),
+        authority=f"{AUTHORITY}/{get_config_value('tenant_id')}"
+    )
+    result = app.acquire_token_by_refresh_token(
+        tokens["refresh_token"], scopes=SCOPES)
     if "access_token" in result:
         result["last_refresh"] = now_utc_iso()
         if save_tokens(result):
             logging.info("Refresh token saved successfully.")
             return True
-    
+
     return False
 
+
 async def get_access_token() -> Optional[str]:
+    """Get the access token from the token path."""
     await refresh_token_if_needed()
     tokens = load_tokens()
     if not tokens or "access_token" not in tokens:
-        logging.error("Access token not found. Please login using device_code flow.")
+        logging.error(
+            "Access token not found. Please login using device_code flow.")
         return None
     return tokens["access_token"]
 
-async def interactive_login() -> bool:
 
-    app = PublicClientApplication(get_config_value("client_id"), authority=f"{AUTHORITY}/{get_config_value('tenant_id')}")
+async def interactive_login() -> bool:
+    """Perform interactive login using device_code flow."""
+    app = PublicClientApplication(
+        get_config_value("client_id"),
+        authority=f"{AUTHORITY}/{get_config_value('tenant_id')}"
+    )
     flow = app.initiate_device_flow(scopes=SCOPES)
     print(flow["message"])
-    
+
     result = app.acquire_token_by_device_flow(flow)
 
     try:
@@ -126,9 +159,16 @@ async def interactive_login() -> bool:
         padded = parts[1] + "=" * (-len(parts[1]) % 4)
         decoded = json.loads(urlsafe_b64decode(padded.encode()))
         scopes = decoded.get("scp", "").split()
-        required = {"Mail.Send", "Mail.Send.Shared", "Mail.ReadWrite", "Mail.ReadWrite.Shared"}
+        required = {
+            "Mail.Send",
+            "Mail.Send.Shared",
+            "Mail.ReadWrite",
+            "Mail.ReadWrite.Shared"
+        }
         if not required.issubset(set(scopes)):
-            print("Access token is missing required scopes: Mail.Send, Mail.Send.Shared, Mail.ReadWrite, Mail.ReadWrite.Shared", file=sys.stderr)
+            print("Access token is missing required scopes: Mail.Send,"
+                  " Mail.Send.Shared, Mail.ReadWrite, Mail.ReadWrite.Shared",
+                  file=sys.stderr)
             return False
     except Exception as e:
         print(f"Failed to decode token: {e}", file=sys.stderr)
@@ -141,10 +181,12 @@ async def interactive_login() -> bool:
     else:
         print("Login failed.", file=sys.stderr)
         return False
-    
+
     return True
 
+
 def show_tokens() -> bool:
+    """Display the decrypted token data."""
     tokens = load_tokens()
     if not tokens:
         print("No token found or unable to decrypt.", file=sys.stderr)
@@ -153,16 +195,20 @@ def show_tokens() -> bool:
     print("🔐 Decrypted token data:")
     if "expires_in" in tokens:
         try:
-            tokens["expires_in_human"] = format_duration(int(tokens["expires_in"]))
-        except:
+            tokens["expires_in_human"] = format_duration(
+                int(tokens["expires_in"]))
+        except (KeyError, ValueError, TypeError):
             pass
-        
+
     print(json.dumps(tokens, indent=2))
     return True
 
+
 def check_credentials(username: str, password: str) -> bool:
+    """Check if the provided credentials are valid."""
     for mailbox in get_config_value("mailboxes", []):
-        if mailbox.get("username") == username and check_password(password, mailbox.get("password", "")):
+        if mailbox.get("username") == username and \
+                check_password(password, mailbox.get("password", "")):
             logging.info(f"Credentials for {username} are valid.")
             return True
     logging.warning(f"Credentials for {username} are invalid.")

@@ -1,3 +1,4 @@
+"""Interactive configuration for m365proxy."""
 # -----------------------------------------------------------------------------
 # m365proxy - Lightweight Microsoft 365 SMTP/POP3 proxy over Graph API
 # https://pypi.org/project/m365proxy
@@ -9,12 +10,13 @@
 import json
 import sys
 from pathlib import Path
+
 from m365proxy.auth import hash_password
 from m365proxy.utils import (
     is_file_writable,
-    is_valid_email,
     is_integer,
-    validated_input
+    is_valid_email,
+    validated_input,
 )
 
 DEFAULT_CONFIG = {
@@ -36,15 +38,19 @@ DEFAULT_CONFIG = {
     },
     "token_path": "tokens.enc"
 }
-    
+
+
 def init_config(config_path: str) -> bool:
+    """Initialize the configuration file with default values."""
     config_path = Path(config_path)
 
     if not is_file_writable(config_path, confirm=True):
         return False
-    
-    DEFAULT_CONFIG["logging"]["log_file"] = str(config_path.parent.resolve() / "m365.log")
-    DEFAULT_CONFIG["token_path"] = str(config_path.parent.resolve() / "token.enc")
+
+    DEFAULT_CONFIG["logging"]["log_file"] = str(config_path.parent.resolve()
+                                                / "m365.log")
+    DEFAULT_CONFIG["token_path"] = str(config_path.parent.resolve()
+                                       / "token.enc")
 
     try:
         with open(config_path, "w") as f:
@@ -59,42 +65,54 @@ def init_config(config_path: str) -> bool:
     except Exception as e:
         print(f"Unexpected error: {e}")
         return False
-    
+
     print(f"Default configuration written to: {config_path.resolve()}")
-    print("Please review and complete the configuration file before running the proxy.")
+    print("Please review and complete the configuration file"
+          " before running the proxy.")
     return True
 
+
 def interactive_configure(config_path: str):
+    """Interactive configuration for m365proxy."""
     config_path = Path(config_path)
-    
+
     if not is_file_writable(config_path, confirm=True):
         return False
-  
+
     config_folder = config_path.parent
-    
+
     try:
         print("Let's configure your M365 Proxy!")
-        user = validated_input("Enter main user (e.g. user@example.com): ", is_valid_email).strip()
+        user = validated_input("Enter main user (e.g. user@example.com): ",
+                               is_valid_email).strip()
         client_id = input("Enter Azure client_id: ").strip()
         tenant_id = input("Enter Azure tenant_id: ").strip()
-        
-        smtp_port = validated_input("Enter SMTP port (default 10025): ", is_integer, 10025)
-        pop3 = input("Enable inbound mail (POP3)? [y/N]: ").strip().lower() == "y"
+
+        smtp_port = validated_input("Enter SMTP port (default 10025): ",
+                                    is_integer, 10025)
+        pop3 = input(
+            "Enable inbound mail (POP3)? [y/N]: ").strip().lower() == "y"
         if pop3:
-            pop3_port = validated_input("  Enter POP3 port (default 10110): ", is_integer,10110)
+            pop3_port = validated_input("  Enter POP3 port (default 10110): ",
+                                        is_integer, 10110)
         else:
             pop3_port = None
 
         print("Configure allowed recipient domains")
-        raw_domains = input("  Allowed domains (comma-separated, e.g. example.com, contoso.com or * to allow all domains): ").strip()
-        allowed_domains = [d.strip().lower() for d in raw_domains.split(",") if d.strip()]
+        raw_domains = input(
+            "  Allowed domains (comma-separated, e.g. example.com, "
+            "contoso.com or * to allow all domains): ").strip()
+        allowed_domains = [d.strip().lower() for d in raw_domains.split(",")
+                           if d.strip()]
         if "*" in allowed_domains:
             allowed_domains = ["*"]
-            
+
         mailboxes = []
         while True:
             print("Add mailbox (used for sending or receiving):")
-            mbx_user = validated_input("  Mailbox username (e.g. send_as@example.com): ", is_valid_email).strip()
+            mbx_user = validated_input(
+                "  Mailbox username (e.g. send_as@example.com): ",
+                is_valid_email).strip()
             mbx_pass = input("  Mailbox password: ").strip()
             mailboxes.append({
                 "username": mbx_user,
@@ -106,7 +124,9 @@ def interactive_configure(config_path: str):
 
         print("")
         print("[Optional]: Configure HTTPS proxy")
-        proxy_url = input("  Proxy address (e.g. proxy.local:3128 or http://proxy.local:3128) [leave blank to skip]: ").strip()
+        proxy_url = input(
+            "  Proxy address (e.g. proxy.local:3128 or "
+            "http://proxy.local:3128) [leave blank to skip]: ").strip()
         https_proxy = None
         if proxy_url:
             if "://" not in proxy_url:
@@ -119,26 +139,40 @@ def interactive_configure(config_path: str):
                 https_proxy["username"] = proxy_user
             if proxy_pass:
                 https_proxy["password"] = proxy_pass
-        
-        enable_tls = input("[Optional]: Enable STARTTLS (or POP3S)? [y/N]: ").strip().lower() == "y"
+
+        enable_tls = input(
+            "[Optional]: Enable STARTTLS (or POP3S)? [y/N]: "
+        ).strip().lower() == "y"
         tls_config = None
         if enable_tls:
             tls_cert = Path(config_folder / 'cert.pem').resolve()
-            tls_cert = input(f"  [Optional]: Path to TLS certificate file (default: \"{tls_cert}\"):: ").strip() or tls_cert
+            tls_cert = input(
+                "  [Optional]: Path to TLS certificate file (default: "
+                f"\"{tls_cert}\"):: ").strip() or tls_cert
             tls_key = Path(config_folder / 'cert_key.pem').resolve()
-            tls_key = input(f"  [Optional]: Path to TLS private key file (default: \"{tls_key}\"):: ").strip() or tls_key
+            tls_key = input(
+                "  [Optional]: Path to TLS private key file (default: "
+                f"\"{tls_key}\"):: ").strip() or tls_key
             tls_config = {
                 "tls_cert": str(tls_cert),
                 "tls_key": str(tls_key)
             }
-        
+
         log_file = Path(config_folder / 'm365.log').resolve()
-        log_level = input("[Optional]: Set log level (default INFO, allowed levels: DEBUG, INFO, WARNING, ERROR): ").strip() or "INFO"
-        if log_level and log_level.upper() not in ["DEBUG", "INFO", "WARNING", "ERROR"]:
+        log_level = input(
+            "[Optional]: Set log level (default INFO, allowed "
+            "levels: DEBUG, INFO, WARNING, ERROR): ").strip() or "INFO"
+        if log_level and log_level.upper() not in [
+            "DEBUG",
+            "INFO",
+            "WARNING",
+            "ERROR"
+        ]:
             print("Invalid log level. Defaulting to INFO.")
             log_level = "INFO"
 
-        log_file = input(f"  [Optional]: Log file path (default: \"{log_file}\"): ").strip() or log_file
+        log_file = input("  [Optional]: Log file path "
+                         f"(default: \"{log_file}\"): ").strip() or log_file
         log_config = {
             "log_level": log_level,
             "log_file": str(log_file)
@@ -162,13 +196,13 @@ def interactive_configure(config_path: str):
 
         if tls_config:
             result["tls"] = tls_config
-    
-        print(f"New configuration:")
+
+        print("New configuration:")
         print(json.dumps(result, indent=4))
-        
+
         with open(config_path, "w") as f:
             json.dump(result, f, indent=4)
-    
+
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON: {e}")
         return False
@@ -181,9 +215,10 @@ def interactive_configure(config_path: str):
     except Exception as e:
         print(f"Unexpected error: {e}")
         return False
-    
+
     print(f"\nThis configuration was saved to {config_path.resolve()}")
-    print(f"You can run the proxy with: 'python -m m365proxy -config {config_path.resolve()}'")
+    print("You can run the proxy with: 'python -m m365proxy "
+          f"-config {config_path.resolve()}'")
     print("Please review the file before launching the proxy.")
     print("")
 

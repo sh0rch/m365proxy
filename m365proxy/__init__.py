@@ -1,3 +1,4 @@
+"""Initialization of m365proxy package."""
 # -----------------------------------------------------------------------------
 # m365proxy - Lightweight Microsoft 365 SMTP/POP3 proxy over Graph API
 # https://pypi.org/project/m365proxy
@@ -12,4 +13,5 @@ __author__ = "sh0rch"
 __author_email__ = "sh0rch@iwl.dev"
 __license__ = "MIT"
 __license_url__ = "https://opensource.org/licenses/MIT"
-__description__ = "Lightweight SMTP and POP3 mail proxy to Microsoft 365 mailbox over HTTPS (with Graph API fallback)."
+__description__ = "Lightweight SMTP and POP3 mail proxy to Microsoft 365 " \
+    "mailbox over HTTPS (with Graph API fallback)."

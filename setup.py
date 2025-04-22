@@ -1,8 +1,12 @@
-from setuptools import setup, find_packages
+"""Setup script for m365proxy module."""
 import os
 import re
 
+from setuptools import find_packages, setup
+
+
 def read_init(field: str) -> str:
+    """Read a field from the __init__.py file."""
     init_file = os.path.join("m365proxy", "__init__.py")
     pattern = rf'^__{field}__\s*=\s*[\'"]([^\'"]+)[\'"]'
 
@@ -13,6 +17,7 @@ def read_init(field: str) -> str:
                 return match.group(1)
 
     raise RuntimeError(f"Unable to find __{field}__ in {init_file}.")
+
 
 setup(
     name="m365proxy",

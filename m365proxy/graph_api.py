@@ -1,3 +1,4 @@
+"""Defines the Graph API client and decorators for API calls."""
 # -----------------------------------------------------------------------------
 # m365proxy - Lightweight Microsoft 365 SMTP/POP3 proxy over Graph API
 # https://pypi.org/project/m365proxy
@@ -8,8 +9,9 @@
 
 import functools
 import logging
-import requests
 import os
+
+import requests
 
 from m365proxy.auth import get_access_token
 
@@ -18,7 +20,9 @@ HTTPS_PROXY = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
 PROXIES = {"https": HTTPS_PROXY} if HTTPS_PROXY else None
 DEFAULT_TIMEOUT = 10
 
+
 def get_auth_headers(token: str, **kwargs) -> dict:
+    """Add authorization headers to the request."""
     headers = kwargs.get("headers", {})
     headers.update({
         "Authorization": f"Bearer {token}",
@@ -29,7 +33,9 @@ def get_auth_headers(token: str, **kwargs) -> dict:
     kwargs.setdefault("timeout", DEFAULT_TIMEOUT)
     return kwargs
 
+
 def request_func(method: str):
+    """Return the appropriate request function based on the method."""
     request_map = {
         'GET': requests.get,
         'POST': requests.post,
@@ -40,20 +46,26 @@ def request_func(method: str):
         raise ValueError(f"Unsupported method: {method}")
     return request_map[method.upper()]
 
+
 def handle_graph_exception(exc: Exception, is_async: bool = False):
+    """Handle exceptions from Graph API calls."""
     if isinstance(exc, requests.HTTPError):
-        status = exc.response.status_code if hasattr(exc, "response") else getattr(exc, "status", None)
-        text = exc.response.text if hasattr(exc, "response") else getattr(exc, "message", str(exc))
+        status = exc.response.status_code if hasattr(exc, "response") \
+            else getattr(exc, "status", None)
+        text = exc.response.text if hasattr(exc, "response") \
+            else getattr(exc, "message", str(exc))
         logging.error(f"Graph API error: {status} - {text}")
     else:
-        logging.error(f"Graph API call failed. {exc.__class__.__name__}, {exc.response}: {exc}")
-
+        logging.error(f"Graph API call failed. {exc.__class__.__name__}, "
+                      f"{exc.response}: {exc}")
 
 
 def graph_api():
+    """Graph API decorator."""
     def decorator(func):
         @functools.wraps(func)
         async def async_wrapper(method, url, *args, **kwargs):
+            """Async wrapper for Graph API."""
             try:
                 logging.debug(f"Calling {func.__name__} with token (async)")
                 token = await get_access_token()
@@ -68,8 +80,10 @@ def graph_api():
         return async_wrapper
     return decorator
 
+
 @graph_api()
 async def api_request(method, url, *args, **kwargs):
+    """Make a Graph API request."""
     request_map = {
         'GET': requests.get,
         'POST': requests.post,
@@ -81,9 +95,10 @@ async def api_request(method, url, *args, **kwargs):
     method = 'GET' if method.upper() == 'RAW' else method.upper()
     r = requests.request(method, url, *args, **kwargs)
     logging.debug(f"Request: {method} {url} - [{r.status_code}]")
-    #r.raise_for_status()
+    # r.raise_for_status()
     if method == 'RAW':
-        logging.debug(f"GET RAW {url} - [{r.status_code}]: {r.content[:100]}...")
+        logging.debug(
+            f"GET RAW {url} - [{r.status_code}]: {r.content[:100]}...")
     else:
         logging.debug(f"{method} {url} - [{r.status_code}]: {r.text[:100]}...")
     return r

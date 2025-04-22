@@ -1,3 +1,4 @@
+"""Main module of m365proxy package."""
 # -----------------------------------------------------------------------------
 # m365proxy - Lightweight Microsoft 365 SMTP/POP3 proxy over Graph API
 # https://pypi.org/project/m365proxy
@@ -8,9 +9,12 @@
 
 import asyncio
 import logging
+
 from m365proxy.cli import main
 
+
 def run():
+    """Run the main function of the m365proxy package."""
     try:
         return asyncio.run(main())
     except KeyboardInterrupt:
@@ -19,6 +23,7 @@ def run():
     except Exception:
         logging.exception("Unhandled exception in main loop")
         return 1
+
 
 if __name__ == "__main__":
     raise SystemExit(run())
