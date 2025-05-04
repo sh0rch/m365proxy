@@ -15,15 +15,17 @@ from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from pathlib import Path
 from typing import Optional
-
+import httpx
 import bcrypt
 from cryptography.fernet import Fernet
 from msal import PublicClientApplication
 
 from m365proxy.config import get_config_value
 
-BASE_DIR = Path(__file__).resolve().parent
+
 AUTHORITY = "https://login.microsoftonline.com"
+# TOKEN_URL = f"{AUTHORITY}/{get_config_value('tenant_id')}/oauth2/v2.0/token"
+BASE_DIR = Path(__file__).resolve().parent
 SCOPES = [
     "https://graph.microsoft.com/Mail.Send",
     "https://graph.microsoft.com/Mail.Send.Shared",
@@ -31,6 +33,11 @@ SCOPES = [
     "https://graph.microsoft.com/Mail.ReadWrite.Shared",
     "https://graph.microsoft.com/User.Read"
 ]
+
+
+def get_token_url() -> str:
+    """Get the token URL for Microsoft Graph API."""
+    return f"{AUTHORITY}/{get_config_value('tenant_id')}/oauth2/v2.0/token"
 
 
 def format_duration(seconds: int) -> str:
@@ -93,47 +100,61 @@ def now_utc_iso() -> str:
 
 
 async def refresh_token_if_needed(force=False) -> bool:
-    """Refresh the access token if needed."""
+    """Refresh the access token if needed, using httpx."""
     tokens = load_tokens()
     if not tokens:
         logging.error("No token found or unable to decrypt.")
         return False
 
     last = tokens.get("last_refresh")
-    if last:
-        try:
-            last = datetime.fromisoformat(last)
-        except Exception:
-            last = datetime(1970, 1, 1).replace(tzinfo=timezone.utc)
-    else:
-        last = datetime(1970, 1, 1).replace(tzinfo=timezone.utc)
-
-    if "refresh_token" in tokens and not force and \
-            datetime.now(timezone.utc) - last < timedelta(hours=1):
-        return True
+    try:
+        last = datetime.fromisoformat(last) if last else datetime(
+            1970, 1, 1, tzinfo=timezone.utc)
+    except Exception:
+        last = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
     if "refresh_token" not in tokens:
         logging.error(
             "Refresh token not found. Please login using device_code flow.")
         return False
 
-    app = PublicClientApplication(
-        get_config_value("client_id"),
-        authority=f"{AUTHORITY}/{get_config_value('tenant_id')}"
-    )
-    result = app.acquire_token_by_refresh_token(
-        tokens["refresh_token"], scopes=SCOPES)
+    if not force and (datetime.now(timezone.utc) - last) < timedelta(hours=1):
+        return True  # Токен ещё валиден
+
+    data = {
+        "client_id": get_config_value("client_id"),
+        "scope": " ".join(SCOPES),
+        "refresh_token": tokens["refresh_token"],
+        "grant_type": "refresh_token"
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(get_token_url(), data=data)
+            response.raise_for_status()
+            result = response.json()
+    except httpx.RequestError as e:
+        logging.error(f"HTTP error during token refresh: {e}")
+        return False
+    except httpx.HTTPStatusError as e:
+        logging.error(
+            f"Graph token refresh failed: {e.response.status_code} {e.response.text}")
+        return False
+
     if "access_token" in result:
         result["last_refresh"] = now_utc_iso()
         if save_tokens(result):
             logging.info("Refresh token saved successfully.")
             return True
-
+        else:
+            logging.error("Failed to save refreshed token.")
+    else:
+        logging.error("No access token returned in response.")
     return False
 
 
 async def get_access_token() -> Optional[str]:
-    """Get the access token from the token path."""
+    """Ensure access token is fresh and return it."""
     await refresh_token_if_needed()
     tokens = load_tokens()
     if not tokens or "access_token" not in tokens:

@@ -13,7 +13,12 @@ import logging
 import signal
 import sys
 
-from aiosmtpd.controller import Controller
+from m365proxy.utils.shutdown import (
+    graceful_shutdown,
+    wait_for_shutdown_signal,
+)
+
+from m365proxy.workers import background_token_refresh, process_queue
 
 from m365proxy.config import (
     IS_WINDOWS,
@@ -22,88 +27,7 @@ from m365proxy.config import (
     load_config,
     setup_logging,
 )
-from m365proxy.proxies import SMTPHandler
-
-
-def trigger_shutdown(shutdown_event: asyncio.Event) -> None:
-    """Trigger a shutdown event."""
-    if not shutdown_event.is_set():
-        logging.info("Shutdown signal received. Stopping...")
-        shutdown_event.set()
-
-
-async def wait_for_shutdown_signal(shutdown_event: asyncio.Event) -> None:
-    """Wait for a shutdown signal (Ctrl+C or Enter)."""
-    loop = asyncio.get_running_loop()
-
-    def keyboard_interrupt():
-        try:
-            if sys.stdin is None or not sys.stdin.isatty():
-                logging.warning("stdin not available, skipping input() wait.")
-                return
-            input()
-        except EOFError:
-            pass
-        except RuntimeError:
-            pass
-        trigger_shutdown(shutdown_event)
-
-    if IS_WINDOWS:
-        loop.run_in_executor(None, keyboard_interrupt)
-        try:
-            signal.signal(signal.SIGINT, lambda s,
-                          f: trigger_shutdown(shutdown_event))
-        except Exception as e:
-            logging.warning(f"Signal handling not fully supported: {e}")
-    else:
-        try:
-            loop.add_signal_handler(signal.SIGINT,
-                                    lambda: trigger_shutdown(shutdown_event))
-            loop.add_signal_handler(signal.SIGTERM,
-                                    lambda: trigger_shutdown(shutdown_event))
-        except NotImplementedError:
-            logging.warning(
-                "Signal handlers not supported, fallback to input()")
-            loop.run_in_executor(None, keyboard_interrupt)
-
-    await shutdown_event.wait()
-
-
-async def graceful_shutdown():
-    """Gracefully shutdown all running tasks."""
-    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    if not tasks:
-        return
-
-    logging.info("Cancelling %d running task(s)...", len(tasks))
-
-    for task in tasks:
-        task.cancel()
-
-    try:
-        await asyncio.gather(*tasks, return_exceptions=True)
-    except Exception as e:
-        logging.warning(f"Exception during shutdown: {e}")
-
-    logging.info("Shutdown complete.")
-
-
-async def background_token_refresh(shutdown_event: asyncio.Event) -> None:
-    """Background task to refresh the access token every 3 days."""
-    from m365proxy.auth import refresh_token_if_needed
-    try:
-        while not shutdown_event.is_set():
-            if not await refresh_token_if_needed():
-                logging.error("Token refresh failed. Triggering shutdown.")
-                trigger_shutdown(shutdown_event)
-                break
-            else:
-                logging.info("Token refreshed. Sleeping for 3 days.")
-                await asyncio.sleep(3 * 24 * 60 * 60)
-
-    except asyncio.CancelledError:
-        logging.info("Background token refresh cancelled.")
-        raise
+from m365proxy.controllers import start_smtp_server, stop_smtp_server
 
 
 async def main() -> int:
@@ -112,11 +36,11 @@ async def main() -> int:
     app_data_dir = get_app_data_dir(args.config)
 
     if args.command == "init-config":
-        from m365proxy.configure import init_config
+        from m365proxy.helpers.configure import init_config
         return init_config(args.config or app_data_dir / "config.json")
 
     if args.command == "configure":
-        from m365proxy.configure import interactive_configure
+        from m365proxy.helpers.configure import interactive_configure
         return interactive_configure(
             args.config or app_data_dir / "config.json"
         )
@@ -140,7 +64,7 @@ async def main() -> int:
         return show_tokens()
 
     if args.command == "test":
-        from m365proxy.mail import send_test
+        from m365proxy.core.smtp import send_test
         return await send_test()
 
     if args.command == "check-config":
@@ -190,9 +114,8 @@ async def main() -> int:
     asyncio.create_task(background_token_refresh(shutdown_event))
     logging.info("Token refresh task started")
 
-    logging.info("Starting mail proxy...")
-    smtp_handler = SMTPHandler(config.get(
-        "mailboxes"), config.get("allowed_domains"))
+    asyncio.create_task(process_queue(shutdown_event))
+    logging.info("Process mail queue task started")
 
     tls_context = None
     if config.get("tls"):
@@ -200,55 +123,27 @@ async def main() -> int:
             import ssl
         tls_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         tls_context.load_cert_chain(
-            certfile=config["tls"]["tls_cert"],
-            keyfile=config["tls"]["tls_key"])
-        smtp_controller = Controller(smtp_handler,
-                                     hostname=config["bind"],
-                                     port=config["smtp_port"],
-                                     require_starttls=True,
-                                     tls_context=tls_context)
-        logging.info(f"TLS enabled with cert: {config['tls']['tls_cert']},"
-                     " key: {config['tls']['tls_key']}")
-    else:
-        smtp_controller = Controller(smtp_handler,
-                                     hostname=config["bind"],
-                                     port=config["smtp_port"],
-                                     auth_require_tls=False)
+            certfile=config.get("tls")["tls_cert"],
+            keyfile=config.get("tls")["tls_key"])
+        logging.info("TLS context created.")
 
-    smtp_controller.start()
-    logging.info(
-        f"SMTP Proxy started on {config['bind']}:{config['smtp_port']}")
+    smtp_controller = await start_smtp_server(config, tls_context)
 
     if isinstance(config.get("pop3_port"), int):
-        from m365proxy.proxies import start_pop3
-        if config.get("tls"):
-            if tls_context is None:
-                logging.error("TLS context not initialized")
-                return 1
-            pop3_controller = start_pop3(host=config["bind"],
-                                         port=config["pop3_port"],
-                                         tls_context=tls_context)
-            logging.info("TLS enabled for POP3 with cert: "
-                         f"{config['tls']['tls_cert']}"
-                         f", key: {config['tls']['tls_key']}")
-        else:
-            pop3_controller = start_pop3(host=config["bind"],
-                                         port=config["pop3_port"])
-        logging.info(f"POP3 Proxy started on {config['bind']}:"
-                     f"{config['pop3_port']}")
+        from m365proxy.controllers.pop3 import start_pop3_server
+        pop3_server = await start_pop3_server(config, tls_context)
 
     logging.info("Mail proxy is running. Press Ctrl+C or Enter to stop.")
     logging.info("Waiting for shutdown signal...")
 
     await wait_for_shutdown_signal(shutdown_event)
 
-    smtp_controller.stop()
+    await stop_smtp_server(smtp_controller)
     logging.info("SMTP Proxy stopped.")
 
-    if 'pop3_controller' in locals():
-        from m365proxy.proxies import stop_pop3
-        stop_pop3(pop3_controller)
-        logging.info("POP3 Proxy stopped.")
+    if 'pop3_server' in locals():
+        from m365proxy.controllers.pop3 import stop_pop3_server
+        await stop_pop3_server(pop3_server)
 
     await graceful_shutdown()
     logging.info("Mail proxy shutdown complete.")

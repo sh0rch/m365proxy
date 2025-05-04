@@ -47,10 +47,10 @@ usage = textwrap.dedent("""\
         %(prog)s [-config CONFIG] [command]
 
     Options:
-            [-config CONFIG] [-token TOKEN] [-log-file LOG_FILE]
-            [-bind BIND_ADDRESS] [-smtp-port SMTP_PORT] [-pop3-port POP3_PORT]
-            [-https-proxy HTTPS_PROXY] [-no-ssl] [-debug | -quiet]
-            [ -h | --help ]
+        [-config CONFIG] [-token TOKEN] [-queue-dir QUEUE_DIR]
+        [-log-file LOG_FILE] [-bind BIND_ADDRESS] [-smtp-port SMTP_PORT]
+        [-pop3-port POP3_PORT] [-https-proxy HTTPS_PROXY] [-no-ssl]
+        [-debug | -quiet] [ -h | --help ]
 
     Commands:
         [ init-config | configure | login | check-token | show-token |
@@ -140,6 +140,12 @@ def get_cmd_parser() -> CustomParser:
         f"(default: <{app_data_dir}>/config.json)"
     )
     parser.add_argument(
+        "-queue-dir",
+        type=str,
+        help="Path to queue directory "
+        f"(default: <{app_data_dir}>/queue)"
+    )
+    parser.add_argument(
         "-token",
         type=str,
         help="Path to token file "
@@ -197,11 +203,6 @@ def get_cmd_parser() -> CustomParser:
         "-quiet",
         action="store_true",
         help="Suppress all output except errors (CLI only)"
-    )
-    parser_log.add_argument(
-        "-log-level", type=str.upper,
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        default="INFO", help="Log level for LOG_FILE (default: INFO)"
     )
 
     return parser
@@ -349,6 +350,14 @@ def load_config(args, path=None) -> dict:
         logging.error("Use 'login' to create a new one.")
         return {}
 
+    queue_dir = args.queue_dir or os.getenv("M365_PROXY_QUEUE_DIR") or \
+        str(config_dir / "queue")
+    try:
+        Path(queue_dir).mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logging.error(f"Error creating queue directory: {e}")
+        return {}
+
     client_id = _config.get("client_id", "x")
     tenant_id = _config.get("tenant_id", "y")
     if client_id[0] == "x" or tenant_id[0] == "y":
@@ -490,6 +499,7 @@ def load_config(args, path=None) -> dict:
     _config["bind"] = bind_address
     _config["smtp_port"] = smtp_bind_port
     _config["pop3_port"] = pop3_bind_port
+    _config["queue_dir"] = str(queue_dir)
 
     return _config
 
