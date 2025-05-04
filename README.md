@@ -30,7 +30,68 @@ Ideal for:
 
 This tool helps consolidate notifications from many devices and subsystems under one tenant, while still keeping SPF/DKIM/DMARC compliant and not exposing internal systems.
 
+
 ---
+## ✨ New Features (v2)
+
+
+## ✨ Features
+
+- ✅ Full async SMTP/POP3 proxy
+- ✅ Microsoft Graph API integration (sendMail, get messages)
+- ✅ Shared mailbox support
+- ✅ OAuth2 Device Flow authentication
+- ✅ Encrypted token storage
+- ✅ Built-in mail queue (for offline mode)
+- ✅ Automatic resend when connection restored
+- ✅ Linux and Windows support
+- ✅ Drop-in SMTP/POP3 replacement
+
+
+
+## 🚀 Quick Start
+
+```bash
+pip install m365proxy
+
+# First-time login to Microsoft 365 via Device Flow
+m365proxy --login
+
+# Start the proxy (SMTP + POP3)
+m365proxy run
+```
+
+
+
+## 📦 Offline Mode & Queue
+
+When Microsoft 365 is unreachable:
+
+- ✉️ Messages are **queued to disk**
+- 🔄 Automatically retried in background (every 5 minutes)
+- 🧊 No data loss — even if the device is offline for hours
+
+You can inspect the queue at:
+
+```bash
+ls ~/.m365proxy/queue/
+```
+
+
+
+## 📡 Architecture
+
+```
+  Legacy Device (SMTP) ─────┐
+                            ├─> SMTP Proxy ──> Graph API ──> Exchange Mailbox
+  App / Printer / Camera ──┘
+
+  POP3 Client <────────────── POP3 Proxy <─── Graph API (Shared Mail)
+```
+
+
+---
+
 
 ## 🐍 Installation
 
