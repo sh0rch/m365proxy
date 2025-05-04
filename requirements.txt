@@ -2,6 +2,11 @@ aiosmtpd==1.4.6
 bcrypt==4.3.0
 colorlog==6.9.0
 cryptography==44.0.2
+httpx==0.28.1
 msal==1.32.0
 python-dotenv==1.1.0
-requests==2.32.3
+PyJWT==2.10.1
+PySocks==1.7.1
+python-dotenv==1.1.0
+PyYAML==6.0.2
+

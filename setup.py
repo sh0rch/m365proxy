@@ -23,7 +23,7 @@ setup(
     name="m365proxy",
     version=read_init("version"),
     description=read_init("description"),
-    long_description=open("README.md", encoding="utf-8").read(),
+    long_description=open("README_PYPI.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     author=read_init("author"),
     author_email=read_init("author_email"),
@@ -33,13 +33,15 @@ setup(
     license="MIT",
     keywords="m365 smtp pop3 proxy mail email graph",
     install_requires=[
-        "requests",
+        "httpx",
         "aiosmtpd",
         "python-dotenv",
         "colorlog",
         "bcrypt",
         "cryptography",
         "msal"
+        "pysocks",
+        "python-jose"
     ],
     entry_points={
         "console_scripts": [
