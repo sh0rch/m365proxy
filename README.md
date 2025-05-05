@@ -58,7 +58,7 @@ pip install m365proxy
 m365proxy configure
 
 # First-time login to Microsoft 365 via Device Flow
-m365proxy --login
+m365proxy login
 
 # Start the proxy (SMTP + POP3)
 m365proxy
@@ -242,7 +242,6 @@ To auto-start the proxy on Windows:
    ```text
    -m m365proxy -quiet
    ```
-   Or, if using the bundled `EXE`, point directly to `m365proxy.exe`.
 
 ## 🐧 systemd (Linux Autostart)
 
