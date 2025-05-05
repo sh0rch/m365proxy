@@ -54,6 +54,9 @@ This tool helps consolidate notifications from many devices and subsystems under
 ```bash
 pip install m365proxy
 
+#Create a configuration file interactively
+m365proxy configure
+
 # First-time login to Microsoft 365 via Device Flow
 m365proxy --login
 
