@@ -58,7 +58,7 @@ pip install m365proxy
 m365proxy --login
 
 # Start the proxy (SMTP + POP3)
-m365proxy run
+m365proxy
 ```
 
 
