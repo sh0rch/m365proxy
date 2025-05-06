@@ -7,7 +7,7 @@
 # Licensed under the MIT License: https://opensource.org/licenses/MIT
 # -----------------------------------------------------------------------------
 
-__version__ = "1.2.0"
+__version__ = "1.2.2"
 __title__ = "m365proxy"
 __author__ = "sh0rch"
 __author_email__ = "sh0rch@iwl.dev"
