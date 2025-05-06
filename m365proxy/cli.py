@@ -119,8 +119,7 @@ async def main() -> int:
 
     tls_context = None
     if config.get("tls"):
-        if "ssl" not in sys.modules:
-            import ssl
+        import ssl
         tls_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         tls_context.load_cert_chain(
             certfile=config.get("tls")["tls_cert"],

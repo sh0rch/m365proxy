@@ -410,8 +410,8 @@ def load_config(args, path=None) -> dict:
     if not args.no_ssl:
         tls = _config.get("tls")
         if tls and isinstance(tls, dict):
-            tls_cert = tls.get("cert")
-            tls_key = tls.get("key")
+            tls_cert = tls.get("tls_cert")
+            tls_key = tls.get("tls_key")
             if not tls_cert or not isinstance(tls_cert, str) or \
                     not is_file_readable(Path(tls_cert)):
                 logging.error(f"TLS certificate file '{tls_cert}' not found.")
