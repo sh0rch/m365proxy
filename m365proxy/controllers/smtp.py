@@ -26,7 +26,7 @@ class SMTPServer:
         mailboxes = self.config.get("mailboxes")
         domains = self.config.get("allowed_domains")
         bind = self.config.get("bind", "127.0.0.1")
-        smtp_port = self.config.get("smtp_port", 1025)
+        smtp_port = self.config.get("smtp_port", 10025)
 
         handler = SMTPHandler(mailboxes, domains)
 

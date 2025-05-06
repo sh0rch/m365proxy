@@ -167,13 +167,14 @@ def get_cmd_parser() -> CustomParser:
 
     parser.add_argument(
         "-bind",
-        default="127.0.0.1",
+        type=str,
+        default=None,
         help="Bind address (default: 127.0.0.1)"
     )
     parser.add_argument(
         "-smtp-port",
         type=int,
-        default=10025,
+        default=None,
         help="SMTP listening port (default: 10025)"
     )
     parser.add_argument(

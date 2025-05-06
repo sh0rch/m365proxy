@@ -96,8 +96,8 @@ class SMTPHandler:
 
         [auth_id, username, password] = parts
 
-        logging.debug(f"AUTH PLAIN: authzid=\"{auth_id}\", user={
-            username}, password=******")
+        logging.debug(f"AUTH PLAIN: authzid=\"{auth_id}\", "
+                        f"user={username}, password=******")
 
         if check_credentials(username, password):
             logging.info(f"Auth success: {username} from server")
@@ -134,8 +134,8 @@ class SMTPHandler:
                 logging.warning(f"Sender not allowed: {parsed_header_from}")
                 return "550 Sender not allowed"
 
-            logging.info(f"Sending message from {parsed_smtp_from} to {
-                envelope.rcpt_tos}")
+            logging.info(f"Sending message from {parsed_smtp_from} to "
+                          f"{envelope.rcpt_tos}")
             await safe_send_mail(parsed_smtp_from, envelope.rcpt_tos, msg)
             return "250 Message accepted for delivery"
 

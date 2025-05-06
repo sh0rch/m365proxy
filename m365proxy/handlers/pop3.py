@@ -99,9 +99,8 @@ class POP3Handler:
                         await self.send('-ERR AUTH LOGIN failed\r\n')
                     continue
 
-                logging.debug(f"POP3: {cmd} "
-                              f"{'*****' if cmd in ('PASS', 'PLAIN')
-                                  else ' '.join(args)}")
+                logging.debug(f"POP3: {cmd} " \
+                    f"{'*****' if cmd in ('PASS', 'PLAIN') else ' '.join(args)}")
 
                 if cmd == "USER":
                     self.username = args[0] if args else None
@@ -141,8 +140,8 @@ class POP3Handler:
                         msg for i, msg in enumerate(self.messages)
                         if i not in self.deleted
                     ]
-                    await self.send(f"+OK {len(remaining)} {sum(
-                        msg['size'] for msg in remaining)}\r\n")
+                    await self.send(f"+OK {len(remaining)} "
+                                f"{sum(msg['size'] for msg in remaining)}\r\n")
 
                 elif cmd == "LIST":
                     await self.send(f"+OK {len(self.messages)} messages:\r\n")
