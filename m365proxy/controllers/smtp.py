@@ -24,7 +24,7 @@ class SMTPServer:
         self.server = None
         self.sport = config.get("smtps_port", None)
         self.port = config.get("smtp_port", None)
-        self.bind = config.get("bind", "localhost")
+        self.bind = config.get("bind", "")
         self.mailboxes = config.get("mailboxes")
         self.domains = config.get("allowed_domains")
         self.type = None
@@ -34,10 +34,10 @@ class SMTPServer:
         handler = SMTPHandler(self.mailboxes, self.domains)
         port = self.port or self.sport
 
-        if self.sport and self.tls_context:
+        if bool(self.sport and self.tls_context):
             mode = "(SSL/TLS mode)"
             self.type = "SMTPS"
-        elif self.port and self.tls_context:
+        elif bool(self.port and self.tls_context):
             mode = "(STARTTLS mode)"
             self.type = "SMTP"
         else:
@@ -93,22 +93,22 @@ async def start_smtp_server(
     """Start one or three SMTP servers: STARTTLS and/or SMTP(S)."""
     servers = []
     smtp_config = {
-        "smtp_port": config.get("smtp_port"),
-        "smtps_port": config.get("smtps_port"),
-        "bind": config.get("bind", "localhost"),
-        "mailboxes": config.get("mailboxes"),
-        "allowed_domains": config.get("allowed_domains"),
+        "smtp_port": config.get("smtp_port", None),
+        "smtps_port": config.get("smtps_port", None),
+        "bind": config.get("bind", ""),
+        "mailboxes": config.get("mailboxes", []),
+        "allowed_domains": config.get("allowed_domains", []),
     }
 
-    if config.get("smtp_port"):
+    if bool(config.get("smtp_port")):
         smtp_config["smtps_port"] = None
         smtp_server = SMTPServer(smtp_config, tls_context)
         await smtp_server.start()
         servers.append(smtp_server)
 
-    if config.get("smtps_port") and tls_context:
+    if bool(config.get("smtps_port") and tls_context):
         smtp_config["smtp_port"] = None
-        smtp_config["smtps_port"] = config.get("smtps_port")
+        smtp_config["smtps_port"] = config.get("smtps_port", None)
         smtps_server = SMTPServer(smtp_config, tls_context)
         await smtps_server.start()
         servers.append(smtps_server)

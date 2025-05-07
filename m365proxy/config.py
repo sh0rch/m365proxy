@@ -300,6 +300,9 @@ def load_config(args, path=None) -> dict:
         _config["logging"] = {}
 
     bind_address = args.bind or _config.get("bind", "localhost")
+    if IS_WINDOWS and bind_address in ["0.0.0.0", "::"]:
+        bind_address = ""
+
     smtps_port, pop3s_port = None, None
     smtp_bind_port, pop3_bind_port = None, None
 
@@ -372,7 +375,7 @@ def load_config(args, path=None) -> dict:
         return {}
 
     mailboxes = _config.get("mailboxes")
-    if not mailboxes or not isinstance(mailboxes, list):
+    if mailboxes is None or not isinstance(mailboxes, list):
         logging.error("Missing mailboxes in config file.")
         logging.error(
             "Edit the config file or use 'configure' to create a new one.")
@@ -387,7 +390,7 @@ def load_config(args, path=None) -> dict:
         return {}
 
     domains = _config.get("allowed_domains")
-    if not domains or not isinstance(domains, list):
+    if domains is None or not isinstance(domains, list):
         logging.error("Missing allowed_domains in config file.")
         logging.error(
             "Edit the config file or use 'configure' to create a new one.")
@@ -395,12 +398,6 @@ def load_config(args, path=None) -> dict:
 
     if not all(isinstance(domain, str) for domain in domains):
         logging.error("allowed_domains must be a list of strings.")
-        logging.error(
-            "Edit the config file or use 'configure' to create a new one.")
-        return {}
-
-    if not _config.get("allowed_domains"):
-        logging.error("Missing allowed_domains in config file.")
         logging.error(
             "Edit the config file or use 'configure' to create a new one.")
         return {}
@@ -508,7 +505,8 @@ def load_config(args, path=None) -> dict:
             logging.error(f"Failed to encode proxy URL: {e}")
             return {}
 
-    if not bind_address or not isinstance(bind_address, str):
+    if not bind_address and not isinstance(bind_address, str) and \
+            bind_address != "":
         logging.error("Bind address must be a string.")
         logging.error("Edit the config file or use 'configure' "
                       "to create a new one.")

@@ -21,7 +21,7 @@ class POP3Server:
         """Initialize the POP3 server with configuration."""
         self.config = config
         self.ssl_context = ssl_context
-        self.bind = config.get("bind", "localhost")
+        self.bind = config.get("bind", "")
         self.sport = config.get("pop3s_port", None)
         self.port = config.get("pop3_port", None)
         self.starttls = config.get("starttls", False)
@@ -77,22 +77,22 @@ async def start_pop3_server(
         ssl_context: ssl.SSLContext = None) -> list[POP3Server]:
     """Initialize and start the POP3 server(s)."""
     servers = []
-    bind_addr = config.get("bind", "localhost")
+    bind_addr = config.get("bind", "")
     enable_starttls = bool(config.get("tls") and config.get("pop3_port"))
-    if config.get("pop3_port"):
+    if bool(config.get("pop3_port")):
         pop3_config = {
             "bind": bind_addr,
-            "pop3_port": config["pop3_port"],
+            "pop3_port": config.get("pop3_port"),
             "starttls": enable_starttls
         }
         srv = POP3Server(pop3_config, ssl_context=ssl_context)
         await srv.start()
         servers.append(srv)
 
-    if config.get("pop3s_port"):
+    if bool(config.get("pop3s_port")):
         pop3s_config = {
             "bind": bind_addr,
-            "pop3s_port": config["pop3s_port"]
+            "pop3s_port": config.get("pop3s_port")
         }
         srvs = POP3Server(pop3s_config, ssl_context=ssl_context)
         await srvs.start()
