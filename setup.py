@@ -4,6 +4,7 @@ import re
 
 from setuptools import find_packages, setup
 
+
 def read_init(field: str) -> str:
     """Read a field from the __init__.py file."""
     init_file = os.path.join("m365proxy", "__init__.py")
