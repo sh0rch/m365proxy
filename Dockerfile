@@ -10,4 +10,3 @@ RUN adduser -D -u 1000 mproxy
 USER mproxy
 
 ENTRYPOINT ["python", "-m", "m365proxy"]
-CMD ["-log-level WARNING"]
