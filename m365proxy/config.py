@@ -438,30 +438,43 @@ def load_config(args, path=None) -> dict:
             )
 
             smtps_port = _config.get("smtps_port", None)
-            if smtps_port and isinstance(smtps_port, int):
-                if not is_port_available(bind_address, smtps_port):
-                    logging.error(f"SMTPS bind port {smtps_port} is already "
-                                  f"in use on {bind_address}.")
-                    logging.error("Edit the config file "
-                                  "to try another one.")
+            if smtps_port is not None:
+                if isinstance(smtps_port, int):
+                    if not is_port_available(bind_address, smtps_port):
+                        logging.error(f"SMTPS bind port {smtps_port} is already "
+                                      f"in use on {bind_address}.")
+                        logging.error("Edit the config file "
+                                      "to try another one.")
+                        return {}
+                else:
+                    logging.error("SMTPS bind port must be an integer.")
+                    logging.error("Edit the config file or use 'configure' "
+                                  "to create a new one.")
                     return {}
-                _config["smtps_port"] = smtps_port
+
                 logging.info(f"SMTPS will be enabled on port {smtps_port}.")
             else:
-                _config["smtps_port"] = None
+                smtps_port = None
+                logging.info("SMTPS will not be enabled.")
 
             pop3s_port = _config.get("pop3s_port", None)
-            if pop3s_port and isinstance(pop3s_port, int):
-                if not is_port_available(bind_address, pop3s_port):
-                    logging.error(f"POP3S bind port {pop3s_port} is already "
-                                  f"in use on {bind_address}.")
-                    logging.error("Edit the config file "
-                                  "to try another one.")
+            if pop3s_port is not None:
+                if isinstance(pop3s_port, int):
+                    if not is_port_available(bind_address, pop3s_port):
+                        logging.error(f"POP3S bind port {pop3s_port} is already "
+                                      f"in use on {bind_address}.")
+                        logging.error("Edit the config file "
+                                      "to try another one.")
+                        return {}
+                else:
+                    logging.error("POP3S bind port must be an integer.")
+                    logging.error("Edit the config file or use 'configure' "
+                                  "to create a new one.")
                     return {}
-                _config["pop3s_port"] = pop3s_port
                 logging.info(f"POP3S will be enabled on port {pop3s_port}.")
             else:
-                _config["pop3s_port"] = None
+                pop3s_port = None
+                logging.info("POP3S will not be enabled.")
 
         else:
             logging.warning("TLS is not enabled. This is insecure!")
@@ -501,29 +514,31 @@ def load_config(args, path=None) -> dict:
                       "to create a new one.")
         return {}
 
-    if not smtp_bind_port or not isinstance(smtp_bind_port, int):
-        logging.error("SMTP bind port must be an integer.")
-        logging.error("Edit the config file or use 'configure' "
-                      "to create a new one.")
-        return {}
+    if smtp_bind_port is not None:
+        if isinstance(smtp_bind_port, int):
+            if not is_port_available(bind_address, smtp_bind_port):
+                logging.error(f"SMTP bind port {smtp_bind_port} is already in use "
+                              f"on {bind_address}.")
+                logging.error("Edit the config file to try another one.")
+                return {}
+        else:
+            logging.error("SMTP bind port must be an integer.")
+            logging.error("Edit the config file or use 'configure' "
+                          "to create a new one.")
+            return {}
 
-    if pop3_bind_port and not isinstance(pop3_bind_port, int):
-        logging.error("POP3 bind port must be an integer.")
-        logging.error("Edit the config file or use 'configure' "
-                      "to create a new one.")
-        return {}
-
-    if not is_port_available(bind_address, smtp_bind_port):
-        logging.error(f"SMTP bind port {smtp_bind_port} is already in use "
-                      f"on {bind_address}.")
-        logging.error("Edit the config file to try another one.")
-        return {}
-
-    if pop3_bind_port and not is_port_available(bind_address, pop3_bind_port):
-        logging.error(f"POP3 bind port {pop3_bind_port} is already in use "
-                      f"on {bind_address}.")
-        logging.error("Edit the config file to try another one.")
-        return {}
+    if pop3_bind_port is not None:
+        if isinstance(pop3_bind_port, int):
+            if not is_port_available(bind_address, pop3_bind_port):
+                logging.error(f"POP3 bind port {pop3_bind_port} is already in use "
+                              f"on {bind_address}.")
+                logging.error("Edit the config file to try another one.")
+                return {}
+        else:
+            logging.error("POP3 bind port must be an integer.")
+            logging.error("Edit the config file or use 'configure' "
+                          "to create a new one.")
+            return {}
 
     ports = [
         p for p in [
@@ -543,6 +558,8 @@ def load_config(args, path=None) -> dict:
     _config["bind"] = bind_address
     _config["smtp_port"] = smtp_bind_port
     _config["pop3_port"] = pop3_bind_port
+    _config["smtps_port"] = smtps_port
+    _config["pop3s_port"] = pop3s_port
     _config["queue_dir"] = str(queue_dir)
 
     return _config
