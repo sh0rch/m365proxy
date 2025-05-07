@@ -46,6 +46,7 @@ jobs:
           context: .
           file: ./${{ matrix.dockerfile }}
           push: false
+          load: true
           tags: sh0rch/m365proxy:${{ matrix.tag }}
 
       - name: Scan image for vulnerabilities
