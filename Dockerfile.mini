@@ -3,7 +3,7 @@ FROM python:3.13-alpine3.20
 ENV M365_PROXY_CONFIG_FILE=/config/config.json
 WORKDIR /app
 
-RUN apk add --no-cache libffi openssl tzdata \
+RUN apk add --no-cache sqlite-libs=3.45.3-r2 libffi openssl tzdata \
     && pip install --no-cache-dir m365proxy
 
 RUN adduser -D -u 1000 mproxy
