@@ -2,7 +2,7 @@
 
 set -e
 
-IMAGE="sh0rch/m365proxy:latest"
+IMAGE="sh0rch/m365proxy:mini"
 CONFIG_DIR="$PWD/config"
 QUEUE_DIR="$PWD/queue"
 M365_PROXY_CONFIG_FILE="/config/config.json"
