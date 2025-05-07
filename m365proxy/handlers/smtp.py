@@ -97,7 +97,7 @@ class SMTPHandler:
         [auth_id, username, password] = parts
 
         logging.debug(f"AUTH PLAIN: authzid=\"{auth_id}\", "
-                        f"user={username}, password=******")
+                      f"user={username}, password=******")
 
         if check_credentials(username, password):
             logging.info(f"Auth success: {username} from server")
@@ -116,7 +116,7 @@ class SMTPHandler:
             if '*' not in self.allowed_domains:
                 denied = rcpt_domains - self.allowed_domains
                 if denied:
-                    logging.warning(f"Denied recipient domain(s): {denied}")
+                    logging.error(f"Denied recipient domain(s): {denied}")
                     return "550 Recipient domain not allowed"
 
             msg = BytesParser(policy=policy.default).parsebytes(
@@ -124,18 +124,18 @@ class SMTPHandler:
             _, parsed_header_from = parseaddr(msg.get("From", "").lower())
 
             if parsed_smtp_from != parsed_header_from:
-                logging.warning(
+                logging.error(
                     f"MAIL FROM ({parsed_smtp_from}) ≠ "
                     f"Header From ({parsed_header_from})"
                 )
                 return "550 MAIL FROM and From: header mismatch"
 
             if parsed_header_from not in self.allowed_from:
-                logging.warning(f"Sender not allowed: {parsed_header_from}")
+                logging.error(f"Sender not allowed: {parsed_header_from}")
                 return "550 Sender not allowed"
 
             logging.info(f"Sending message from {parsed_smtp_from} to "
-                          f"{envelope.rcpt_tos}")
+                         f"{envelope.rcpt_tos}")
             await safe_send_mail(parsed_smtp_from, envelope.rcpt_tos, msg)
             return "250 Message accepted for delivery"
 

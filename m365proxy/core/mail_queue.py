@@ -13,8 +13,6 @@ from pathlib import Path
 from email.message import EmailMessage
 from email.policy import default
 from m365proxy.config import get_config_value
-from functools import wraps
-from requests.exceptions import ConnectionError, Timeout, HTTPError
 
 
 def save_to_queue(mail_from: str, rcpt_tos: list[str], msg: EmailMessage):

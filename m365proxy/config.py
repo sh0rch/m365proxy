@@ -64,7 +64,6 @@ class CustomParser(argparse.ArgumentParser):
     def error(self, message):
         """Override error method to customize error handling."""
         print(usage, file=sys.stderr)
-        # print(f"\nError: {message}\n\n", file=sys.stderr)
         self.exit(2, f"\nError: {message}\n\n")
 
 
@@ -300,6 +299,10 @@ def load_config(args, path=None) -> dict:
     if not _config.get("logging") or not isinstance(_config["logging"], dict):
         _config["logging"] = {}
 
+    bind_address = args.bind or _config.get("bind", "localhost")
+    smtps_port, pop3s_port = None, None
+    smtp_bind_port, pop3_bind_port = None, None
+
     log_cfg = _config["logging"]
 
     if args.log_file:
@@ -419,7 +422,7 @@ def load_config(args, path=None) -> dict:
                               "to create a new one.")
                 return {}
             else:
-                _config["tls"]["tls_cert"] = Path(tls_cert).resolve()
+                tls["tls_cert"] = Path(tls_cert).resolve()
             if not tls_key or not isinstance(tls_key, str) or \
                     not is_file_readable(Path(tls_key)):
                 logging.error(f"TLS key file '{tls_key}' not found.")
@@ -427,17 +430,45 @@ def load_config(args, path=None) -> dict:
                               "to create a new one.")
                 return {}
             else:
-                _config["tls"]["tls_key"] = Path(tls_key).resolve()
+                tls["tls_key"] = Path(tls_key).resolve()
+
             logging.info(
                 "TLS will be enabled. Ensure you have the valid certificates."
             )
+
+            smtps_port = _config.get("smtps_port", None)
+            if smtps_port and isinstance(smtps_port, int):
+                if not is_port_available(bind_address, smtps_port):
+                    logging.error(f"SMTPS bind port {smtps_port} is already "
+                                  f"in use on {bind_address}.")
+                    logging.error("Edit the config file "
+                                  "to try another one.")
+                    return {}
+                _config["smtps_port"] = smtps_port
+                logging.info(f"SMTPS will be enabled on port {smtps_port}.")
+            else:
+                _config["smtps_port"] = None
+
+            pop3s_port = _config.get("pop3s_port", None)
+            if pop3s_port and isinstance(pop3s_port, int):
+                if not is_port_available(bind_address, pop3s_port):
+                    logging.error(f"POP3S bind port {pop3s_port} is already "
+                                  f"in use on {bind_address}.")
+                    logging.error("Edit the config file "
+                                  "to try another one.")
+                    return {}
+                _config["pop3s_port"] = pop3s_port
+                logging.info(f"POP3S will be enabled on port {pop3s_port}.")
+            else:
+                _config["pop3s_port"] = None
+
         else:
             logging.warning("TLS is not enabled. This is insecure!")
             logging.warning("Consider enabling TLS for secure connections.")
 
-    bind_address = args.bind or _config.get("bind", "localhost")
     smtp_bind_port = args.smtp_port or _config.get("smtp_port", 10025)
     pop3_bind_port = args.pop3_port or _config.get("pop3_port", None)
+
     https_proxy = args.https_proxy or\
         os.getenv("https_proxy") or\
         os.getenv("http_proxy") or\
@@ -484,15 +515,26 @@ def load_config(args, path=None) -> dict:
     if not is_port_available(bind_address, smtp_bind_port):
         logging.error(f"SMTP bind port {smtp_bind_port} is already in use "
                       f"on {bind_address}.")
-        logging.error("Edit the config file or use '-smtp-port' "
-                      "to try another one.")
+        logging.error("Edit the config file to try another one.")
         return {}
 
     if pop3_bind_port and not is_port_available(bind_address, pop3_bind_port):
         logging.error(f"POP3 bind port {pop3_bind_port} is already in use "
                       f"on {bind_address}.")
-        logging.error("Edit the config file or use '-pop3-port' "
-                      "to try another one.")
+        logging.error("Edit the config file to try another one.")
+        return {}
+
+    ports = [
+        p for p in [
+            smtp_bind_port, pop3_bind_port, smtps_port, pop3s_port
+        ] if p is not None
+    ]
+
+    if len(ports) != len(set(ports)):
+        logging.error("SMTP, SMTPS, POP3, and POP3S must be configured with")
+        logging.error("unique ports. Do not assign the same port to multiple")
+        logging.error("services. If a service is not required, simply omit its port.")
+        logging.error("Edit the config file to try another one.")
         return {}
 
     _config["token_path"] = token_path

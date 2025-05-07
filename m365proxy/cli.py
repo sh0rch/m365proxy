@@ -10,8 +10,8 @@
 import asyncio
 import json
 import logging
-import signal
 import sys
+import ssl
 
 from m365proxy.utils.shutdown import (
     graceful_shutdown,
@@ -21,7 +21,6 @@ from m365proxy.utils.shutdown import (
 from m365proxy.workers import background_token_refresh, process_queue
 
 from m365proxy.config import (
-    IS_WINDOWS,
     get_app_data_dir,
     get_cmd_parser,
     load_config,
@@ -119,7 +118,6 @@ async def main() -> int:
 
     tls_context = None
     if config.get("tls"):
-        import ssl
         tls_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         tls_context.load_cert_chain(
             certfile=config.get("tls")["tls_cert"],
@@ -128,19 +126,20 @@ async def main() -> int:
 
     smtp_controller = await start_smtp_server(config, tls_context)
 
-    if isinstance(config.get("pop3_port"), int):
+    if isinstance(config.get("pop3_port"), int) or \
+            isinstance(config.get("pop3s_port"), int):
         from m365proxy.controllers.pop3 import start_pop3_server
         pop3_server = await start_pop3_server(config, tls_context)
 
-    logging.info("Mail proxy is running. Press Ctrl+C or Enter to stop.")
+    logging.info(
+        "Mail proxy is running. Press Ctrl+C or Enter(Windows OS) to stop.")
     logging.info("Waiting for shutdown signal...")
 
     await wait_for_shutdown_signal(shutdown_event)
 
     await stop_smtp_server(smtp_controller)
-    logging.info("SMTP Proxy stopped.")
 
-    if 'pop3_server' in locals():
+    if 'pop3_server' in locals() or 'pop3s_server' in locals():
         from m365proxy.controllers.pop3 import stop_pop3_server
         await stop_pop3_server(pop3_server)
 

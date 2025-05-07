@@ -8,7 +8,7 @@
 # -----------------------------------------------------------------------------
 
 import logging
-from m365proxy.helpers.graph_helper import graph_api, is_graph_available
+from m365proxy.helpers.graph_helper import graph_api
 
 
 @graph_api()
