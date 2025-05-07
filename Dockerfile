@@ -1,4 +1,4 @@
-FROM python:3.13-alpine
+FROM python:3.13-alpine3.20
 
 ENV M365_PROXY_CONFIG_FILE=/config/config.json
 
@@ -12,7 +12,7 @@ RUN apk add --no-cache --virtual .build-deps \
     openssl-dev \
     python3-dev \
     build-base \
-    && apk add --no-cache sqlite-libs=3.48.0-r1 libffi openssl tzdata \
+    && apk add --no-cache libffi openssl tzdata \
     && python3 -m ensurepip \
     && pip install --no-cache-dir --upgrade "pip>=24.0" "setuptools>=69.5.1" "wheel>=0.42.0" \
     && rm -r /usr/lib/python*/ensurepip
