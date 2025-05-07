@@ -73,14 +73,14 @@ class SMTPHandler:
             logging.info(f"Auth success: {username} from server")
             return AuthResult(success=True, handled=True)
 
-        server.push("535 5.7.8 Authentication credentials invalid")
+        await server.push("535 5.7.8 Authentication credentials invalid")
         logging.error(f"Auth failed: {username} from server")
         return AuthResult(success=False, handled=True)
 
     async def auth_PLAIN(self, server, args):  # noqa: N802
         """Handle PLAIN authentication mechanism."""
         if len(args) < 2 or args[0] != "PLAIN":
-            server.push("501 5.5.4 No mechanism specified")
+            await server.push("501 5.5.4 No mechanism specified")
             return AuthResult(
                 success=False,
                 handled=True,
@@ -90,7 +90,7 @@ class SMTPHandler:
         parts = base64.b64decode(args[1]).decode(
             'utf-8', 'replace').split('\x00')
         if len(parts) != 3:
-            server.push("501 5.5.4 Invalid PLAIN data format")
+            await server.push("501 5.5.4 Invalid PLAIN data format")
             return AuthResult(success=False, handled=True,
                               message="Invalid PLAIN data format")
 
@@ -103,6 +103,8 @@ class SMTPHandler:
             logging.info(f"Auth success: {username} from server")
             return AuthResult(success=True, handled=True)
 
+        await server.push("535 5.7.8 Authentication credentials invalid")
+        logging.error(f"Auth failed: {username} from server")
         return AuthResult(success=False, handled=True)
 
     async def handle_DATA(self, server, session, envelope):  # noqa: N802

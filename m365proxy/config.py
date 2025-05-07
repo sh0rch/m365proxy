@@ -439,7 +439,7 @@ def load_config(args, path=None) -> dict:
                 if isinstance(smtps_port, int):
                     if not is_port_available(bind_address, smtps_port):
                         logging.error(f"SMTPS bind port {smtps_port} is already "
-                                      f"in use on {bind_address}.")
+                                      f"in use.")
                         logging.error("Edit the config file "
                                       "to try another one.")
                         return {}
@@ -459,7 +459,7 @@ def load_config(args, path=None) -> dict:
                 if isinstance(pop3s_port, int):
                     if not is_port_available(bind_address, pop3s_port):
                         logging.error(f"POP3S bind port {pop3s_port} is already "
-                                      f"in use on {bind_address}.")
+                                      f"in use.")
                         logging.error("Edit the config file "
                                       "to try another one.")
                         return {}
@@ -515,8 +515,7 @@ def load_config(args, path=None) -> dict:
     if smtp_bind_port is not None:
         if isinstance(smtp_bind_port, int):
             if not is_port_available(bind_address, smtp_bind_port):
-                logging.error(f"SMTP bind port {smtp_bind_port} is already in use "
-                              f"on {bind_address}.")
+                logging.error(f"SMTP bind port {smtp_bind_port} is already in use.")
                 logging.error("Edit the config file to try another one.")
                 return {}
         else:
@@ -528,8 +527,7 @@ def load_config(args, path=None) -> dict:
     if pop3_bind_port is not None:
         if isinstance(pop3_bind_port, int):
             if not is_port_available(bind_address, pop3_bind_port):
-                logging.error(f"POP3 bind port {pop3_bind_port} is already in use "
-                              f"on {bind_address}.")
+                logging.error(f"POP3 bind port {pop3_bind_port} is already in use.")
                 logging.error("Edit the config file to try another one.")
                 return {}
         else:
@@ -553,7 +551,7 @@ def load_config(args, path=None) -> dict:
 
     _config["token_path"] = token_path
     _config["https_proxy"] = https_proxy
-    _config["bind"] = bind_address
+    _config["bind"] = str(bind_address)
     _config["smtp_port"] = smtp_bind_port
     _config["pop3_port"] = pop3_bind_port
     _config["smtps_port"] = smtps_port

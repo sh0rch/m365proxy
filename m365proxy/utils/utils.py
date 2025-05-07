@@ -136,6 +136,9 @@ def is_valid_email(email: str) -> bool:
 
 def is_port_available(host, port, timeout=2.0):
     """Check if the port is available."""
+    if not host or host == "0.0.0.0":
+        host = "127.0.0.1"
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(timeout)
         result = sock.connect_ex((host, port))
