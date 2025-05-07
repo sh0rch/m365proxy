@@ -1,0 +1,13 @@
+repos:
+  - repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: v1.6.0  # укажи актуальную версию
+    hooks:
+      - id: autopep8
+        args: [--in-place, --aggressive, --aggressive]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0  # актуальная версия
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-bugbear

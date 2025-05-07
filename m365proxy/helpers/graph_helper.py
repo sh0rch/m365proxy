@@ -30,7 +30,7 @@ def get_httpx_proxies() -> str | None:
 
 
 async def is_graph_reachable(timeout=1.0):
-    """Checks if the Graph API is reachable."""
+    """Check if the Graph API is reachable."""
     proxy = get_httpx_proxies()
     try:
         async with httpx.AsyncClient(timeout=timeout, proxy=proxy) as client:
@@ -49,7 +49,7 @@ async def is_graph_reachable(timeout=1.0):
 
 
 async def is_dns_available(host=GRAPH_HOST) -> bool:
-    """Checks if DNS is available for the given host."""
+    """Check if DNS is available for the given host."""
     try:
         loop = asyncio.get_running_loop()
         await loop.getaddrinfo(host, None)
@@ -60,7 +60,7 @@ async def is_dns_available(host=GRAPH_HOST) -> bool:
 
 
 async def is_graph_available():
-    """Checks if the Graph API is available."""
+    """Check if the Graph API is available."""
     return await is_dns_available() and await is_graph_reachable(timeout=1.0)
 
 
@@ -77,7 +77,7 @@ def get_auth_headers(token: str, extra_headers: dict = None) -> dict:
 
 
 def handle_graph_exception(exc: Exception):
-    """Handles errors from the Graph API."""
+    """Handle errors from the Graph API."""
     if isinstance(exc, httpx.HTTPStatusError):
         logging.error(f"Graph API HTTP error: {exc.response.status_code}"
                       f" - {exc.response.text}")
@@ -88,7 +88,7 @@ def handle_graph_exception(exc: Exception):
 
 
 def graph_api():
-    """Decorator for requests to Microsoft Graph API."""
+    """Wrap Microsoft Graph API calls."""
     def decorator(func):
         @wraps(func)
         async def async_wrapper(method, url, *args, **kwargs):
@@ -102,10 +102,8 @@ def graph_api():
                     proxy=proxy,
                     timeout=DEFAULT_TIMEOUT
                 ) as client:
-                    response = await func(client,
-                                          method,
-                                          url,
-                                          headers=headers, *args, **kwargs)
+                    kwargs.setdefault("headers", headers)
+                    response = await func(client, method, url, *args, **kwargs)
                     response.raise_for_status()
                     return response
             except Exception as e:
@@ -116,7 +114,7 @@ def graph_api():
 
 
 def safe_graph_api_request(fallback=None):
-    """Decorator that catches network unavailability from the Graph API."""
+    """Check network unavailability for the Graph API."""
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):

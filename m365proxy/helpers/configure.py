@@ -9,6 +9,7 @@
 
 import json
 import sys
+import getpass
 from pathlib import Path
 
 from m365proxy.auth import hash_password
@@ -38,6 +39,17 @@ DEFAULT_CONFIG = {
     },
     "token_path": "tokens.enc"
 }
+
+
+def get_password(prompt: str = "Enter password: ") -> str:
+    """Prompt for a password and confirm it."""
+    while True:
+        password = getpass.getpass(prompt)
+        confirm = getpass.getpass("  Confirm password: ")
+        if password == confirm:
+            return password
+        else:
+            print("  Passwords do not match. Please try again.")
 
 
 def init_config(config_path: str) -> bool:
@@ -83,17 +95,18 @@ def interactive_configure(config_path: str):
 
     try:
         print("Let's configure your M365 Proxy!")
-        user = validated_input("Enter main user (e.g. user@example.com): ",
-                               is_valid_email).strip()
+        user = validated_input("Enter main user",
+                               is_valid_email,
+                               "user@example.com").strip()
         client_id = input("Enter Azure client_id: ").strip()
         tenant_id = input("Enter Azure tenant_id: ").strip()
 
-        smtp_port = validated_input("Enter SMTP port (default 10025): ",
+        smtp_port = validated_input("Enter SMTP port",
                                     is_integer, 10025)
         pop3 = input(
             "Enable inbound mail (POP3)? [y/N]: ").strip().lower() == "y"
         if pop3:
-            pop3_port = validated_input("  Enter POP3 port (default 10110): ",
+            pop3_port = validated_input("  Enter POP3 port",
                                         is_integer, 10110)
         else:
             pop3_port = None
@@ -111,9 +124,10 @@ def interactive_configure(config_path: str):
         while True:
             print("Add mailbox (used for sending or receiving):")
             mbx_user = validated_input(
-                "  Mailbox username (e.g. send_as@example.com): ",
-                is_valid_email).strip()
-            mbx_pass = input("  Mailbox password: ").strip()
+                "  Mailbox username",
+                is_valid_email,
+                "send_as@example.com").strip()
+            mbx_pass = get_password("  Mailbox password: ").strip()
             mailboxes.append({
                 "username": mbx_user,
                 "password": hash_password(mbx_pass)
@@ -133,30 +147,54 @@ def interactive_configure(config_path: str):
                 proxy_url = "http://" + proxy_url
 
             proxy_user = input("  Proxy username [optional]: ").strip()
-            proxy_pass = input("  Proxy password [optional]: ").strip()
+            proxy_pass = get_password("  Proxy password [optional]: ").strip()
             https_proxy = {"url": proxy_url}
             if proxy_user:
                 https_proxy["username"] = proxy_user
             if proxy_pass:
                 https_proxy["password"] = proxy_pass
 
+        smtps_port = None
+        pop3s_port = None
         enable_tls = input(
-            "[Optional]: Enable STARTTLS (or POP3S)? [y/N]: "
+            "[Optional]: Enable SSL/TLS/STARTTLS? [y/N]: "
         ).strip().lower() == "y"
         tls_config = None
         if enable_tls:
             tls_cert = Path(config_folder / 'cert.pem').resolve()
             tls_cert = input(
                 "  [Optional]: Path to TLS certificate file (default: "
-                f"\"{tls_cert}\"):: ").strip() or tls_cert
+                f"\"{tls_cert}\"): ").strip() or tls_cert
             tls_key = Path(config_folder / 'cert_key.pem').resolve()
             tls_key = input(
                 "  [Optional]: Path to TLS private key file (default: "
-                f"\"{tls_key}\"):: ").strip() or tls_key
+                f"\"{tls_key}\"): ").strip() or tls_key
             tls_config = {
                 "tls_cert": str(tls_cert),
                 "tls_key": str(tls_key)
             }
+            print()
+            print("""
+ [Optional] Certificates for secure communication with the server have been
+            successfully installed. You now have the option to enable SMTPS
+            and POP3S (SSL/TLS from the start) instead of using STARTTLS..
+""")
+            ssl_tls = input("""
+            Would you like to use the configured ports for SMTPS and POP3S
+            instead of STARTTLS (Answer “N” if you want to keep both
+            STARTTLS and SSL/TLS.) [y/N]? """).strip().lower() == "y"
+            if ssl_tls:
+                pop3s_port = pop3_port
+                smtps_port = smtp_port
+                pop3_port = None
+                smtp_port = None
+            else:
+                smtps_port = validated_input("""
+            Enter SMTPS port (default None)""",
+                                             is_integer, None)
+                pop3s_port = validated_input("""
+            Enter POP3S port (default None)""",
+                                             is_integer, None)
 
         log_file = Path(config_folder / 'm365.log').resolve()
         log_level = input(
@@ -187,6 +225,8 @@ def interactive_configure(config_path: str):
             "bind": "127.0.0.1",
             "smtp_port": smtp_port,
             "pop3_port": pop3_port,
+            "smtps_port": smtps_port,
+            "pop3s_port": pop3s_port,
             "logging": log_config,
             "token_path": str(config_folder / "tokens.enc"),
         }

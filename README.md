@@ -30,24 +30,44 @@ Ideal for:
 
 This tool helps consolidate notifications from many devices and subsystems under one tenant, while still keeping SPF/DKIM/DMARC compliant and not exposing internal systems.
 
-
 ---
+
 ## ✨ New Features (v2)
 
+- 🆕 **POP3 STARTTLS support** — mail clients can now upgrade plaintext POP3 connections to TLS securely
+- 🆕 **SMTP SMTPS support (TLS from start)** — SMTPS (port 465) is now supported in addition to STARTTLS (port 587 or custom)
+- 🆕 **POP3S support (TLS from start)** — full support for POP3 over SSL/TLS (port 995)
+- 🔁 **Simultaneous operation of all modes** — you can now run:
+  - SMTP (with STARTTLS)
+  - SMTPS (SSL/TLS)
+  - POP3 (with STARTTLS)
+  - POP3S (SSL/TLS)
+    …on different ports, either individually or together
+- 🛠 **Improved configuration parser**:
+  - Clearer validation of TLS, ports, logging paths, and mailbox entries
+  - Prevents conflicts like `smtp_port == smtps_port`
+  - Enhanced proxy URL formatting and diagnostics
+- 🤝 **Better compatibility** with popular clients and devices:
+  - Thunderbird, Outlook, MFDs, embedded IoT mailers, etc.
+- ✅ **Final release for this stage** — future possibilities (IMAP, shared calendars, folders) may push the project into enterprise mail territory, which goes beyond the scope and potentially conflicts with Microsoft licensing — and that’s not a direction this project is taking.
 
-## ✨ Features
+## Overview
 
-- ✅ Full async SMTP/POP3 proxy
-- ✅ Microsoft Graph API integration (sendMail, get messages)
-- ✅ Shared mailbox support
-- ✅ OAuth2 Device Flow authentication
-- ✅ Encrypted token storage
-- ✅ Built-in mail queue (for offline mode)
-- ✅ Automatic resend when connection restored
-- ✅ Linux and Windows support
-- ✅ Drop-in SMTP/POP3 replacement
+This tool is designed for cases where you want to use real mail clients and devices (like scan-to-email from printers or backup software) with Microsoft 365 but want to avoid exposing user credentials or managing OAuth2 flows manually.
 
+It provides local endpoints (SMTP and POP3) that forward requests securely via Microsoft Graph.
 
+## Features
+
+- ✅ Transparent mail sending via Microsoft Graph `/sendMail`
+- ✅ Works with shared mailboxes ("Send As")
+- ✅ Supports large attachments (up to 150MB via Graph API chunked upload)
+- ✅ POP3 receiving, with folder selection and message flags
+- ✅ Shared folder access for POP3 download (e.g. service@domain.com)
+- ✅ STARTTLS and SMTPS support
+- ✅ Multiple mailboxes with independent credentials
+- ✅ Authenticated and secure
+- ✅ Python-based and container-ready
 
 ## 🚀 Quick Start
 
@@ -64,8 +84,6 @@ m365proxy login
 m365proxy
 ```
 
-
-
 ## 📦 Offline Mode & Queue
 
 When Microsoft 365 is unreachable:
@@ -80,8 +98,6 @@ You can inspect the queue at:
 ls ~/.m365proxy/queue/
 ```
 
-
-
 ## 📡 Architecture
 
 ```
@@ -92,9 +108,7 @@ ls ~/.m365proxy/queue/
   POP3 Client <────────────── POP3 Proxy <─── Graph API (Shared Mail)
 ```
 
-
 ---
-
 
 ## 🐍 Installation
 
@@ -193,7 +207,7 @@ python -m m365proxy -config /tmp/myconfig.json -token /tmp/mytoken.enc -log-file
 
 ## 🐳 Docker
 
-Here’s how to run `m365proxy` in a container:
+Here's how to run `m365proxy` in a container:
 
 **Dockerfile:**
 

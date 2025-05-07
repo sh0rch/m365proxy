@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  m365proxy:
+    build: .
+    container_name: m365proxy
+    volumes:
+      - ./config:/config        # Contains config.json and tokens.enc
+      - ./queue:/app/queue      # Mail queue directory
+    ports:
+      - "10025:10025"             # SMTP
+      - "10110:10110"               # POP3
+      - "10465:10465"               # SMTPS
+      - "10995:10995"               # POP3S
+    restart: unless-stopped

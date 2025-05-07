@@ -155,6 +155,6 @@ async def send_test() -> None:
     msg.set_content("This is a test message from SMTP Proxy.")
 
     if await send_mail(mailbox, [recipient], msg):
-        print("✅ Test message sent")
+        logging.info("Test message sent")
     else:
-        print("❌ Test message failed")
+        logging.error("Test message failed")

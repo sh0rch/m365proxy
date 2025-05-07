@@ -213,7 +213,7 @@ def show_tokens() -> bool:
         print("No token found or unable to decrypt.", file=sys.stderr)
         return False
 
-    print("🔐 Decrypted token data:")
+    print("Decrypted token data:")
     if "expires_in" in tokens:
         try:
             tokens["expires_in_human"] = format_duration(
