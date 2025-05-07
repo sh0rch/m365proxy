@@ -1,18 +1,13 @@
-FROM python:3.11-slim
+FROM python:3.13-alpine
 
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy project source
-COPY . /app
+ENV M365_PROXY_CONFIG_FILE=/config/config.json
 WORKDIR /app
 
-# Default environment variable for config path
-ENV CONFIG_PATH=/config/config.json
+RUN apk add --no-cache libffi openssl tzdata \
+    && pip install --no-cache-dir m365proxy
 
-# Create directory for mail queue
-RUN mkdir -p /app/queue
+RUN adduser -D -u 1000 mproxy
+USER mproxy
 
-# Entrypoint with default config path
 ENTRYPOINT ["python", "-m", "m365proxy"]
+CMD ["-log-level WARNING"]

@@ -4,10 +4,6 @@ import re
 
 from setuptools import find_packages, setup
 
-# Define the directory containing this script
-this_dir = os.path.abspath(os.path.dirname(__file__))
-
-
 def read_init(field: str) -> str:
     """Read a field from the __init__.py file."""
     init_file = os.path.join("m365proxy", "__init__.py")
@@ -42,14 +38,14 @@ setup(
         "colorlog",
         "bcrypt",
         "cryptography",
-        "msal"
+        "msal",
         "pysocks",
-        "python-jose"
+        "python-jose",
     ],
     entry_points={
         "console_scripts": [
             "m365-proxy=m365proxy.cli:main"
         ]
     },
-    python_requires='>=3.8',
+    python_requires='>=3.9.7',
 )

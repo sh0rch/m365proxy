@@ -1,0 +1,31 @@
+FROM python:3.13-alpine
+
+ENV M365_PROXY_CONFIG_FILE=/config/config.json
+
+WORKDIR /app
+
+# Install build dependencies, then remove
+RUN apk add --no-cache --virtual .build-deps \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    python3-dev \
+    build-base \
+    && apk add --no-cache libffi openssl tzdata \
+    && python3 -m ensurepip \
+    && rm -r /usr/lib/python*/ensurepip
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --no-compile --no-warn-script-location -r requirements.txt \
+    && apk del .build-deps
+
+COPY . .
+RUN mkdir -p /app/queue
+
+# Create non-root user and switch to it
+RUN adduser -D -u 1000 mproxy
+USER mproxy
+
+ENTRYPOINT ["python", "-m", "m365proxy"]
+CMD ["-quiet"]

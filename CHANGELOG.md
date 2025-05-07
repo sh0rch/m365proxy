@@ -1,6 +1,6 @@
 # 📦 Changelog — m365proxy
 
-## [2.0.0] - 2025-05-06
+## [2.1.0] - 2025-05-07
 
 ### ✨ Major Changes
 
@@ -15,6 +15,8 @@
   - robust validation for TLS, ports, paths, mailboxes, and HTTPS proxy
 - 🤝 **Improved compatibility with mail clients and devices**
   - tested with Outlook, Thunderbird, network printers, scanners, etc.
+- 🔧 **Enhanced error handling for network failures**
+- 📜 **Improved logging for better debugging**
 
 ### ✅ Final release for this stage
 
