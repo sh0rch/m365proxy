@@ -28,6 +28,13 @@ from m365proxy.config import (
 )
 from m365proxy.controllers import start_smtp_server, stop_smtp_server
 
+LOG_LEVELS = {
+    'DEBUG': logging.DEBUG,
+    'INFO': logging.INFO,
+    'WARNING': logging.WARNING,
+    'ERROR': logging.ERROR
+}
+
 
 async def main() -> int:
     """Run the SMTP/POP3 proxy."""
@@ -53,6 +60,11 @@ async def main() -> int:
     setup_logging(mode)
 
     config = load_config(args)
+
+    logger = logging.getLogger()
+    log_level_str = config.get("logging", {}).get("log_level")
+    log_level = LOG_LEVELS.get(log_level_str, logging.INFO)
+    logger.setLevel(log_level)
 
     if not config:
         logging.error("Failed to load configuration. Exiting.")

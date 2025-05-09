@@ -3,7 +3,7 @@
 set -e
 
 CONTAINER_NAME="m365proxy"
-IMAGE="sh0rch/m365proxy"
+IMAGE="sh0rch/m365proxy:mini"
 
 echo "[INFO] Stopping container..."
 docker stop "$CONTAINER_NAME" || true

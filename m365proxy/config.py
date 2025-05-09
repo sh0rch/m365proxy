@@ -160,7 +160,7 @@ def get_cmd_parser() -> CustomParser:
         "-log-level",
         type=str.upper,
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        default="INFO",
+        default=None,
         help="Log level for LOG_FILE (default: INFO)"
     )
 
@@ -307,7 +307,6 @@ def load_config(args, path=None) -> dict:
     smtp_bind_port, pop3_bind_port = None, None
 
     log_cfg = _config["logging"]
-
     if args.log_file:
         log_cfg["log_file"] = args.log_file
     if args.log_level:

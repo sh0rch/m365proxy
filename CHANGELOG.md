@@ -1,5 +1,10 @@
 # 📦 Changelog — m365proxy
 
+## [2.2.6] - 2025-05-09
+
+- 📜 **Fix: Correct default logging level**
+- 🔧 **Fix: Correctly handle `None` values in configuration**
+
 ## [2.2.2] - 2025-05-07
 
 ### ✨ Major Changes
