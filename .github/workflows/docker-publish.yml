@@ -47,15 +47,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./${{ matrix.dockerfile }}
-          push: false
-          load: true
-          tags: sh0rch/m365proxy:${{ matrix.tag }}
-
       - name: Scan image for vulnerabilities
         uses: aquasecurity/trivy-action@0.30.0
         with:
@@ -72,6 +63,8 @@ jobs:
           push: true
           tags: |
             sh0rch/m365proxy:${{ matrix.tag }}
+          sbom: true
+          provenance: true
 
       - name: Push image to GitHub Container Registry
         uses: docker/build-push-action@v5
@@ -81,3 +74,33 @@ jobs:
           push: true
           tags: |
             ghcr.io/sh0rch/m365proxy:${{ matrix.tag }}
+          sbom: true
+          provenance: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.3.0
+
+      - name: Sign image with cosign (DockerHub)
+        run: |
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY sh0rch/m365proxy:${{ matrix.tag }}
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+      - name: Sign image with cosign (GHCR)
+        run: |
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY ghcr.io/sh0rch/m365proxy:${{ matrix.tag }}
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+
+      - name: Verify image signature (DockerHub)
+        run: |
+          cosign verify --key env://COSIGN_PUBLIC_KEY sh0rch/m365proxy:${{ matrix.tag }}
+        env:
+          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+
+      - name: Verify image signature (GHCR)
+        run: |
+          cosign verify --key env://COSIGN_PUBLIC_KEY ghcr.io/sh0rch/m365proxy:${{ matrix.tag }}
+        env:
+          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+
