@@ -103,6 +103,9 @@ async def send_mail(
     to, cc, bcc = split_recipients(msg, rcpt_tos)
     logging.debug(f"Recipients: To: {to}, Cc: {cc}, Bcc: {bcc}")
 
+    reply_to = [addr for _, addr in getaddresses(msg.get_all("Reply-To", []))]
+    logging.debug(f"Reply-To: {reply_to}")
+
     graph_message = {
         "message": {
             "subject": msg.get("Subject", ""),
@@ -113,6 +116,7 @@ async def send_mail(
             "toRecipients": format_recipients(to),
             "ccRecipients": format_recipients(cc),
             "bccRecipients": format_recipients(bcc),
+            "replyTo": format_recipients(reply_to),
         }
     }
 
